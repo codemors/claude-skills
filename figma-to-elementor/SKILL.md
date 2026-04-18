@@ -3,6 +3,8 @@
 Convert any Figma design URL into a live Elementor page on WordPress.
 Automatic, end-to-end, requires zero technical knowledge from the user.
 
+> Built by [Mor M.](https://github.com/MorMaman)
+
 **Announce at start:** "I'm using the figma-to-elementor skill to build your Elementor page."
 
 ---

@@ -4,6 +4,8 @@ description: "Scans the current project for the 5 most common vibe-coding securi
 allowed-tools: Bash, Grep, Glob, Read
 ---
 
+> Built by [Mor M.](https://github.com/MorMaman)
+
 Announce: "Running Vibe Security Scan on the current project..."
 
 Then follow these 6 steps in order. Collect all findings, then print the full report at the end.
