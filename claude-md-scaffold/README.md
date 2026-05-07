@@ -1,4 +1,4 @@
-# scaffold-claude-md
+# CLAUDE.md Scaffold
 
 **Audit-first CLAUDE.md scaffold and maintenance skill** for [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
@@ -77,17 +77,17 @@ Update docs only for the changes in this diff — don't touch anything else.
 
 ## Install / use
 
-This is a [Claude Code skill](https://docs.anthropic.com/en/docs/claude-code/skills). Drop the `scaffold-claude-md/` folder under a skills directory:
+This is a [Claude Code skill](https://docs.anthropic.com/en/docs/claude-code/skills). Drop the `claude-md-scaffold/` folder under a skills directory:
 
 ```
-~/.claude/skills/scaffold-claude-md/
+~/.claude/skills/claude-md-scaffold/
 ├── SKILL.md
 ├── README.md
 ├── references/
 └── scripts/
 ```
 
-Then invoke it from Claude Code (e.g. `/scaffold-claude-md` or by asking Claude to "scaffold a CLAUDE.md hierarchy" / "audit my CLAUDE.md").
+Then invoke it from Claude Code (e.g. `/claude-md-scaffold` or by asking Claude to "scaffold a CLAUDE.md hierarchy" / "audit my CLAUDE.md").
 
 ## Files
 

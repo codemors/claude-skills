@@ -1,5 +1,5 @@
 ---
-name: scaffold-claude-md
+name: claude-md-scaffold
 description: "Audit-first CLAUDE.md scaffold and maintenance. Builds a clean, hierarchical CLAUDE.md structure for a project, or audits an existing one without rewriting it. Supports four explicit modes (scaffold-new-project, audit-existing-project, focused-doc-fix, dedupe-cleanup) so mature projects are never silently overwritten."
 ---
 
