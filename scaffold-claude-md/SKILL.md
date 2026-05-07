@@ -34,17 +34,59 @@ The skill supports four modes. Always state which mode you are in before generat
 | `focused-doc-fix` | User points at one specific stale fact / wrong section | Edits only the named section, with diff preview |
 | `dedupe-cleanup` | Trim duplicates, consolidate sections | **High risk.** Separate branch recommended. |
 
+## Read-only analyze rule (load-bearing)
+
+The analyze phase must be **strictly read-only**. It must not:
+
+- Modify, create, or delete files anywhere in the project
+- Install packages or dependencies (`npm install`, `pip install`, `brew install`, etc.)
+- Run database migrations or any DB-mutating command
+- Start servers, dev servers, or background processes
+- Deploy or trigger any CI/CD action
+- Change git state (no `git add`, `git commit`, `git push`, `git checkout`, `git stash`, no branch creation)
+- Read, edit, or write `.env` files or any secrets store
+- Change secrets, tokens, or credentials in any system
+- Write output files (including `CLAUDE-AUDIT.md`) unless the user has **explicitly** asked for a file output
+
+The only side effect of analyze is stdout text (the JSON from `scripts/analyze-project.sh`) and an in-chat report. Anything beyond that requires explicit user approval per request.
+
 ## Existing-project safety rule (load-bearing)
 
 If existing CLAUDE.md files are detected during analysis, the default behavior is **audit-only**:
 
 - Do **not** overwrite existing CLAUDE.md
-- Do **not** rebuild or regenerate
-- Do **not** trim, delete, or move sections
-- Produce a **stale-docs report** first (what looks outdated, what's missing, what duplicates what)
+- Do **not** rebuild or regenerate from scratch
+- Do **not** delete, move, rename, or restructure existing docs
+- Do **not** trim or remove sections
+- Do **not** auto-create `CLAUDE-AUDIT.md` or any other output file
+- First, output the audit report **in chat / stdout only**
+- Only write `CLAUDE-AUDIT.md` (or any file) if the user **explicitly** asks for a file
 - Stop before any edit and wait for the user to pick a mode
 
 The user must explicitly opt into `focused-doc-fix` or `dedupe-cleanup` after reading the report. Bulk rewrites of an existing CLAUDE.md without explicit consent are forbidden.
+
+## Production-system safety (load-bearing)
+
+For production or live projects, the skill must **never edit** any of the following unless the user has explicitly asked for that exact area:
+
+- Payment code or billing logic
+- Secrets, tokens, API keys, credentials
+- `.env` files or any environment configuration
+- Database migrations or schema files
+- Cron jobs or scheduled tasks
+- Edge functions or serverless handlers
+- Deployment configuration (CI/CD, infra-as-code, Dockerfiles, deploy scripts)
+- Notification, SMS, email, or push-sending logic
+- Authentication, authorization, or security-related code
+
+If the requested doc work touches a risky area:
+
+1. Perform an **audit / read-only inspection** first.
+2. Present the planned **file changes** as a list, before editing.
+3. Present any **SQL, migration, or command plan separately** from doc edits.
+4. **Stop and wait for explicit approval** before making any change.
+
+This rule is load-bearing: doc work is never a license to touch production code paths.
 
 ## Commit hygiene rule (load-bearing, mature projects)
 
@@ -73,7 +115,7 @@ In `audit-existing-project` mode, skip the conversation. Produce the report inst
 ### Phase 3: Generate (scaffold mode) or Report (audit mode)
 
 - **Scaffold:** write root CLAUDE.md using [`references/root-template.md`](references/root-template.md), per-folder using [`references/feature-template.md`](references/feature-template.md).
-- **Audit:** write a single stale-docs report to stdout (or to `CLAUDE-AUDIT.md` if user requests). Do not modify existing files.
+- **Audit:** output a single stale-docs report **in chat / stdout only**. Do not modify existing files. Do not auto-create `CLAUDE-AUDIT.md`. Only write a report file if the user explicitly asks for one in this turn.
 
 ### Phase 4: Preview + iterate
 
@@ -105,7 +147,7 @@ Write files. Tell user where they are. In audit/dedupe modes, remind the user ab
 - **Tables over paragraphs.** For file lists, command lists, gotcha symptoms.
 - **Gotchas are first-class.** Every project has 1-3. Surface them. Format: Symptom → Fix → Why.
 - **Mark load-bearing rules.** Use the phrase "load-bearing" so future readers know not to change without thinking.
-- **Link, don't duplicate.** If `docs/architecture.md` exists, root CLAUDE.md says "see docs/architecture.md for full details" — doesn't repeat.
+- **Link, don't duplicate.** CLAUDE.md should summarize **durable rules only**. Prefer linking to existing docs over copying long content. Avoid duplicating instructions across root and nested CLAUDE.md files. If `docs/architecture.md` exists, root CLAUDE.md says "see docs/architecture.md for full details" — it doesn't repeat. If duplication already exists between root and a sub-folder CLAUDE.md, **recommend consolidation** in the audit report — do not auto-edit to fix it.
 - **Sub-CLAUDE.md is optional.** Only create one when the folder has its own non-obvious rules. A folder with 3 simple files doesn't need one.
 
 ## Done when

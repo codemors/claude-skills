@@ -54,6 +54,10 @@ This separation makes review possible and reverts safe.
 - Should **not** touch secrets or `.env` files.
 - Should **not** modify production systems.
 - Should **not** do broad cleanup in the same commit as factual fixes.
+- Should **not** edit payment code, auth/security code, database migrations, cron jobs, edge functions, deployment config, or notification/SMS/email-sending logic — unless you explicitly asked for that exact area.
+- Should **not** auto-create `CLAUDE-AUDIT.md` or any other output file during an audit. The report goes to chat first; a file is written only if you explicitly ask.
+
+The analyze phase is **read-only**: no file writes, no package installs, no migrations, no servers, no deploys, no git state changes, no env or secret access. See `SKILL.md` ("Read-only analyze rule" and "Production-system safety") for the full rules.
 
 If you ask it to do any of the above, it should refuse or redirect you to the appropriate tool.
 
