@@ -1,13 +1,15 @@
 ---
 name: scaffold-claude-md
-description: Build a clean, hierarchical CLAUDE.md structure for any project. Analyzes the codebase, asks 5-6 high-signal questions, then generates a root CLAUDE.md plus optional sub-CLAUDE.md files in feature folders. Follows Anthropic's best practices: lead with WHY, tables over paragraphs, gotchas as first-class citizens. Works on any tech stack — Node, Python, Go, monorepo, anything.
+description: "Audit-first CLAUDE.md scaffold and maintenance. Builds a clean, hierarchical CLAUDE.md structure for a project, or audits an existing one without rewriting it. Supports four explicit modes (scaffold-new-project, audit-existing-project, focused-doc-fix, dedupe-cleanup) so mature projects are never silently overwritten."
 ---
 
 # Scaffold a CLAUDE.md hierarchy
 
-A 6-turn conversational skill that produces a navigable CLAUDE.md system for a project, instead of one giant file that nobody reads.
+A conversational skill that produces or audits a navigable CLAUDE.md system, instead of one giant file that nobody reads.
 
-## What it produces
+This is **not** an "auto-fix my CLAUDE.md" tool. On any project that already has a CLAUDE.md, the skill defaults to **audit only** — it reports findings and stops before editing.
+
+## What it produces (scaffold mode)
 
 ```
 your-project/
@@ -21,29 +23,65 @@ your-project/
 └── docs/                      ← if exists, root CLAUDE.md links to it
 ```
 
-## When to use
+## Modes (pick one explicitly before doing anything)
 
-- Joining a project that has no CLAUDE.md
-- Existing CLAUDE.md is one giant file and you want to refactor it
-- Adding a new major feature that needs its own context
-- Onboarding others (human or AI) into the codebase
+The skill supports four modes. Always state which mode you are in before generating or editing files. If the user did not specify, ask.
+
+| Mode | When to use | Touches existing files? |
+|------|-------------|-------------------------|
+| `scaffold-new-project` | Project has **no** CLAUDE.md anywhere | Creates new files only |
+| `audit-existing-project` | Project already has CLAUDE.md(s) | **Read-only.** Produces a stale-docs report and stops. |
+| `focused-doc-fix` | User points at one specific stale fact / wrong section | Edits only the named section, with diff preview |
+| `dedupe-cleanup` | Trim duplicates, consolidate sections | **High risk.** Separate branch recommended. |
+
+## Existing-project safety rule (load-bearing)
+
+If existing CLAUDE.md files are detected during analysis, the default behavior is **audit-only**:
+
+- Do **not** overwrite existing CLAUDE.md
+- Do **not** rebuild or regenerate
+- Do **not** trim, delete, or move sections
+- Produce a **stale-docs report** first (what looks outdated, what's missing, what duplicates what)
+- Stop before any edit and wait for the user to pick a mode
+
+The user must explicitly opt into `focused-doc-fix` or `dedupe-cleanup` after reading the report. Bulk rewrites of an existing CLAUDE.md without explicit consent are forbidden.
+
+## Commit hygiene rule (load-bearing, mature projects)
+
+For mature projects, **never mix factual fixes and broad cleanup in the same commit.** Keep these as separate commits (and ideally separate branches):
+
+1. Stale-doc fixes (a wrong fact, an outdated path, a renamed command)
+2. Safety fixes (unguarded instruction, missing "load-bearing" marker)
+3. Dedupe / trim / restructure cleanup
+
+Mixing these makes review impossible and makes reverts unsafe.
 
 ## Phases
 
 ### Phase 1: Analyze (silent)
-Run `scripts/analyze-project.sh` from project root. Detects stack, entry points, candidate feature folders. See [`references/analysis.md`](references/analysis.md).
 
-### Phase 2: Conversation (5-6 turns)
-Ask the user the questions whose answers you can't infer from the code. See [`references/conversation.md`](references/conversation.md).
+Run `scripts/analyze-project.sh` from project root. Detects stack, entry points, candidate feature folders, **and existing CLAUDE.md files**. See [`references/analysis.md`](references/analysis.md).
 
-### Phase 3: Generate
-Write root CLAUDE.md using the template in [`references/root-template.md`](references/root-template.md). Write per-folder CLAUDE.md files using [`references/feature-template.md`](references/feature-template.md).
+If the analysis shows existing CLAUDE.md files, switch to `audit-existing-project` mode by default and tell the user. Do not proceed to scaffold without explicit confirmation.
+
+### Phase 2: Conversation (5-6 turns, scaffold mode only)
+
+Ask the user the questions whose answers you can't infer from the code. One per turn. See [`references/conversation.md`](references/conversation.md).
+
+In `audit-existing-project` mode, skip the conversation. Produce the report instead.
+
+### Phase 3: Generate (scaffold mode) or Report (audit mode)
+
+- **Scaffold:** write root CLAUDE.md using [`references/root-template.md`](references/root-template.md), per-folder using [`references/feature-template.md`](references/feature-template.md).
+- **Audit:** write a single stale-docs report to stdout (or to `CLAUDE-AUDIT.md` if user requests). Do not modify existing files.
 
 ### Phase 4: Preview + iterate
-Show generated files. Offer to expand/trim sections.
+
+Show generated files or report. Offer to expand/trim sections.
 
 ### Phase 5: Save + close
-Write files. Tell user where they are and how Claude Code uses them.
+
+Write files. Tell user where they are. In audit/dedupe modes, remind the user about the commit hygiene rule before they stage changes.
 
 ## Reference map
 
@@ -58,9 +96,9 @@ Write files. Tell user where they are and how Claude Code uses them.
 
 ## Scripts
 
-`scripts/analyze-project.sh` — run from project root. Outputs JSON with detected stack, entry points, folder candidates, package manager, line counts. Idempotent.
+`scripts/analyze-project.sh` — run from project root. Outputs JSON with detected stack, entry points, folder candidates, package manager, line counts, and any existing CLAUDE.md paths. Idempotent.
 
-## Rules
+## Rules (apply during scaffold mode)
 
 - **Don't write everything you can detect.** Half of a good CLAUDE.md is what you DELETE. Aim for 100-200 lines on root, 30-80 lines per sub-folder.
 - **Lead with WHY.** First section is "what is this project and how does it fit together", not "here are all the files".
@@ -72,10 +110,11 @@ Write files. Tell user where they are and how Claude Code uses them.
 
 ## Done when
 
-- Root `CLAUDE.md` exists and is under 250 lines
-- Each sub-folder CLAUDE.md (if any) is under 100 lines
-- User has read the preview and confirmed
-- All files committed to git (or staged, depending on user preference)
+- (Scaffold) Root `CLAUDE.md` exists and is under 250 lines
+- (Scaffold) Each sub-folder CLAUDE.md (if any) is under 100 lines
+- (Audit) Stale-docs report delivered, no files modified
+- (Focused fix / dedupe) Diff previewed, user approved, separate commit per category
+- User has read the preview / report and confirmed
 
 ## Notes on Claude Code's loading behavior
 

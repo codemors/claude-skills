@@ -2,6 +2,16 @@
 
 Run `scripts/analyze-project.sh` from project root. Then synthesize what was found into "what I know vs what I need to ask".
 
+## Existing-CLAUDE.md gate (check FIRST)
+
+Before anything else, check the `existing_claude_md` field in the JSON output. If it's non-empty:
+
+- Switch to `audit-existing-project` mode by default.
+- Tell the user: "I found existing CLAUDE.md file(s) at: {paths}. Defaulting to audit-only. To overwrite or trim, you must explicitly pick `focused-doc-fix` or `dedupe-cleanup`."
+- Skip Phase 2 (the conversation) and go straight to Phase 3 audit/report output.
+
+This is load-bearing: never silently regenerate over an existing CLAUDE.md.
+
 ## What the script detects automatically
 
 | Detected | How |

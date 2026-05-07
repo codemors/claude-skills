@@ -102,6 +102,17 @@ detect_folder_candidates() {
   echo "${candidates%,}"
 }
 
+# --- Existing CLAUDE.md detection (load-bearing for safety mode) ---
+detect_existing_claude_md() {
+  find . -name "CLAUDE.md" -type f \
+    -not -path './node_modules/*' \
+    -not -path './.git/*' \
+    -not -path './dist/*' \
+    -not -path './build/*' \
+    -not -path './.next/*' \
+    2>/dev/null | sed 's|^\./||' | tr '\n' ',' | sed 's/,$//'
+}
+
 # --- Top-level folder line counts ---
 folder_lines() {
   local results=""
@@ -111,19 +122,23 @@ folder_lines() {
     esac
     [ -d "$dir" ] || continue
     local lines
-    lines=$(find "$dir" -type f \( -name "*.ts" -o -name "*.js" -o -name "*.py" -o -name "*.go" -o -name "*.rs" -o -name "*.rb" -o -name "*.php" -o -name "*.java" -o -name "*.tsx" -o -name "*.jsx" \) -exec cat {} + 2>/dev/null | wc -l)
+    lines=$(find "$dir" -type f \( -name "*.ts" -o -name "*.js" -o -name "*.py" -o -name "*.go" -o -name "*.rs" -o -name "*.rb" -o -name "*.php" -o -name "*.java" -o -name "*.tsx" -o -name "*.jsx" \) -exec cat {} + 2>/dev/null | wc -l | tr -d ' ')
     [ "$lines" -gt 0 ] && results+="${dir%/}:$lines,"
   done
   echo "${results%,}"
 }
 
 # --- Dev commands from package.json scripts ---
+# JSON-safe: escape double quotes and strip newlines so output is a valid JSON string value.
 detect_commands() {
+  local raw=""
   if [ -f "package.json" ]; then
-    grep -E '"(dev|start|build|test|lint)"' package.json | head -10 | sed 's/^[[:space:]]*//' | tr '\n' ';' || true
+    raw=$(grep -E '"(dev|start|build|test|lint)"' package.json | head -10 | sed 's/^[[:space:]]*//' | tr '\n' ';' || true)
   elif [ -f "Makefile" ]; then
-    grep -E '^[a-z][a-z_-]*:' Makefile | head -10 | tr '\n' ';' || true
+    raw=$(grep -E '^[a-z][a-z_-]*:' Makefile | head -10 | tr '\n' ';' || true)
   fi
+  # Escape backslashes first, then double quotes
+  printf '%s' "$raw" | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
 
 # --- Output JSON ---
@@ -135,6 +150,7 @@ cat <<EOF
   "test_frameworks": "$(detect_tests)",
   "entry_point": "$(detect_entry)",
   "existing_docs": "$(detect_docs)",
+  "existing_claude_md": "$(detect_existing_claude_md)",
   "sub_claude_candidates": "$(detect_folder_candidates)",
   "folder_line_counts": "$(folder_lines)",
   "dev_commands_raw": "$(detect_commands)"
